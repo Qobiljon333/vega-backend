@@ -13,7 +13,19 @@ const studentSchema = new mongoose.Schema({
     image:{
         type:String
     },
+    offLineLesson:{
+        type:Array
+    },
     mainLessons:{
+        type:Array
+    },
+    overallLessons:{
+        type:Array
+    },
+    overallLessonsCount:{
+        type:Number
+    },
+    teachers:{
         type:Array
     },
     lessons:{

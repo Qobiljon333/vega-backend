@@ -17,6 +17,29 @@ router.get("/", [auth, owner], async(req, res)=>{
         res.json("something went wrong")
     }
 })
+
+router.get("/:id", async(req,res) => {
+    try{
+        const {id} = req.params
+        const admin = await Admin.findById(id)
+        if (!admin) {
+            return res.json({
+                state:false,
+                msg:"Admin is not found",
+                data:admin
+            })
+        }
+
+        res.json({
+            state:true,
+            msg:"Successfully",
+            data:admin
+        })
+    }
+    catch(err){
+        res.json("smth went wrong ",err)
+    }
+})
 router.post("/", async(req, res)=>{
     try{
         const {error} = adminValidate(req.body)

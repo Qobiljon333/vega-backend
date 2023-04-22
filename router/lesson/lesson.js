@@ -103,7 +103,82 @@ router.get("/special/:teacher_name", async (req,res) => {
     }
 })
 
+router.get("/lessons-learning/:id", async(req, res) => {
+  try{
+        const {id} = req.params ;
+        const lessonsLearning = []
+        const lessons = await (await Lessons.find()).filter(lesson =>  lesson.students.forEach(learnersId => {
+          if (learnersId === id) {
+            lessonsLearning.push(lesson)
+            
+          }
+        }))
+        
+        if(!lessonsLearning.length){
+          return res.json({
+            state:false,
+            msg:"Lessons aren't found",
+            data: lessonsLearning
+          })
+        }
 
+        res.json({
+          state:true,
+          msg:"Ok",
+          data:lessonsLearning
+        })
+
+      }
+  catch(err){
+    res.json("smth went wrong", err)
+  }
+})
+
+router.get("/search/:searchText", async(req,res) => {
+  try{
+    const {searchText} = req.params
+
+    const lessons = await (await Lessons.find()).filter( lesson => lesson.title.toLocaleLowerCase().includes(searchText.toLocaleLowerCase()) || lesson.owner.toLocaleLowerCase().includes(searchText.toLocaleLowerCase()) )
+    if (!lessons) {
+      return res.json({
+        state:false,
+        msg:"lessons are not found",
+        data:lessons
+      })
+    }
+    res.json({
+      state:true,
+      msg:"Successfully l",
+      data:lessons
+    })
+  }
+  catch(err){
+    res.json("smth went wrong ",err)
+  }
+})
+
+router.get('/lesson-of-themes/:id', async(req,res) => {
+  try{
+     const {id} = req.params
+     if (!id) {
+       return res.json({
+        state:false,
+        msg:"there is no theme id ",
+        data:id
+       })
+     }
+     const lesson = await (await Lessons.find()).filter(lesson => lesson.lessons.includes(id))
+     
+     res.json({
+      state :true,
+      msg:"Successfully",
+      data:lesson
+     })
+  }
+  catch(err){
+    res.json("smth went wrong")
+  }
+})
 // Method: Get
 // Desc:   Get one lesson by id
 router.get("/:id", async (req, res) => {
@@ -173,7 +248,7 @@ router.post("/create/:teacher_name", uploads.array("image"),  async (req, res) =
         password,
         type,
         owner:teacher_name,
-        students:0,
+        students:[],
         like:0,
         disLike:0,
         comments:[],
@@ -327,6 +402,37 @@ router.put("/:id",  async (req, res) => {
     }
   })
 
+
+  // Method : Patch
+  //   add learner 
+  router.patch("/learner/:id", async(req, res) => {
+    try{
+      const {id} = req.params
+      const {student} = req.body
+
+      if(!student){
+        return res.status(200).json({
+          state:false,
+          msg:"student is not found",
+          data:student
+        })
+      }
+
+      const updateLessonOne = await Lessons.findById(id)
+      const updateLesson = await Lessons.updateOne(
+        {_id: id},
+        {
+          $set: {
+            students: [...updateLessonOne.students ,student ]
+          }
+        }
+      );
+      res.json({msg: 'This Student is added', data: updateLesson, state: true})
+    }
+    catch(err){
+      res.json("smth went wrong",err)
+    }
+  })
 
  // Method : Patch
   // add lesson Like

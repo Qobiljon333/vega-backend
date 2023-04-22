@@ -21,7 +21,7 @@ const lessonSchema = new mongoose.Schema({
         type:String
     },
     type:String,
-    students:Number,
+    students:Array,
     like:Number,
     disLike:Number,
     comments:Array,
@@ -38,7 +38,7 @@ const lessonsValidate = (body) => {
         password: Joi.string().required(),
         owner: Joi.string(),
         type: Joi.string(),
-        students: Joi.number(),
+        students: Joi.array(),
         like: Joi.number(),
         disLike: Joi.number(),
         comments: Joi.array(),

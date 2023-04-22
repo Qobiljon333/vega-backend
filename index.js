@@ -21,8 +21,11 @@ app.get('/', async(req,res)=> {
 app.use("/sign-up", require("./router/login/sign-up"))
 app.use("/sign-in", require("./router/login/sign-in"))
 app.use("/lesson", require("./router/lesson/lesson"))
+app.use("/theme", require("./router/theme/theme"))
 app.use("/teacher", require("./router/teacher/teacher"))
 app.use("/student",require("./router/student/student"))
+app.use("/subject",require("./router/subject/subject"))
+app.use("/studentImage",require("./router/studentImages/studentImages"))
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`server running on port: ${PORT}`));

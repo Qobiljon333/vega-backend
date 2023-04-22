@@ -24,6 +24,32 @@ router.get("/all-teachers", async(req, res)=>{
     }
 })
 // Method: Get
+// Desc get teachers by username
+router.get("/:username", async (req, res) => {
+  try{
+    const { username } = req.params
+   
+    const specialTeachers = await (await Teachers.find()).filter(teacher => teacher.username.includes(username))
+
+    if(!specialTeachers.length){
+      return res.json({
+        state:false,
+        msg:"teachers are not found",
+        data:specialTeachers
+      })
+    }
+
+    res.json({
+      state:true,
+      msg:"Successfully",
+      data:specialTeachers
+    })
+  }
+  catch(err){
+    res.json("smth went wrong",err)
+  }
+})
+// Method: Get
 // Desc:   Get one Teacher by id
 router.get("/single-teacher/:id", async (req, res) => {
     try {
@@ -49,7 +75,7 @@ router.get("/single-teacher/:id", async (req, res) => {
 
   // Method: Get
 // Desc:   Get one Teacher by id
-router.get("/:id", async (req, res) => {
+router.get("/:id", async(req, res) => {
   try {
     const teacher = await Teachers.findById(req.params.id);
 
@@ -71,6 +97,31 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Method : Get
+// Search teachers
+router.get("/search/:searchText", async(req,res) => {
+  try{
+    const {searchText} = req.params
+
+    const teachers = await (await Teachers.find()).filter(teacher => teacher.username.toLocaleLowerCase().includes(searchText.toLocaleLowerCase()) || teacher.name.toLocaleLowerCase().includes(searchText.toLocaleLowerCase()))
+    if (!teachers) {
+     return  res.json({
+        state:false,
+        msg:"teachers are not found",
+        data:teachers
+      })
+    }
+
+    res.json({
+      state:true,
+      msg:"Successfully",
+      data:teachers
+    })
+  }
+  catch(err){
+    res.json("smth went wrong," ,err)
+  }
+})
 // Method: Get
 // see more
 router.get("/see-more-teachers/:teacherCount", async (req,res) => {
@@ -88,7 +139,7 @@ router.get("/see-more-teachers/:teacherCount", async (req,res) => {
 
 // Method : Post 
 // Create tescher 
-router.post("/sign-up/:creator_name", auth, uploads.array("image"),  async(req, res)=>{
+router.post("/sign-up/:creator_name", uploads.array("image"),  async(req, res)=>{
     try{
 
       const uploader = async (path) => await cloudinary.uploads(path, "teachers");
@@ -229,9 +280,9 @@ router.post("/sign-in", async(req, res)=>{
 
  // Method : Patch
   // add students
-  router.patch("/add-student/:id", async(req, res)=>{
+  router.patch("/add-student/:username", async(req, res)=>{
     try{
-      const {id} = req.params
+      const {username} = req.params
       const { student } = req.body
       if(!student){
         return res.status(200).json({
@@ -240,9 +291,9 @@ router.post("/sign-in", async(req, res)=>{
           data:student
         })
       }
-      const updateTeacherOne = await Teachers.findById(id)
+      const updateTeacherOne = await ( await Teachers.find()).filter(teacher => teacher.username === username)[0]
       const updateTeacher = await Teachers.updateOne(
-        {_id: id},
+        {username: username},
         {
           $set: {
             students: [...updateTeacherOne.students ,student ]

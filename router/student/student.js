@@ -22,6 +22,58 @@ router.get("/all-students", async(req, res)=>{
         res.json("something went wrong")
     }
 })
+// Method Get
+// Get groupmates
+router.get("/groupmates/:id", async(req,res) => {
+  try{
+     const {id} = req.params
+     const groupmates = await (await Students.find()).filter(student => student.mainLessons.includes(id))
+
+     if (!groupmates.length) {
+        return res.json({
+          state:false,
+          msg:"Students are not found",
+          data:groupmates
+        })
+     }
+
+     res.json({
+      state:true,
+      msg:"Successfully",
+      data:groupmates
+     })
+     
+  }
+  catch(err){
+    res.json("smth went wrong ",err)
+  }
+})
+// Method : Get
+// Get teacher's student
+router.get("/special/:teacher", async(req, res) =>{
+  try{
+    const {teacher} = req.params
+
+    const students = await (await Students.find()).filter(student => student.teachers.includes(teacher))
+    if (!students) {
+      return res.json({
+        state:false,
+        msg:"Students are not found",
+        data:students
+      })
+    }
+
+    res.json({
+      state:true,
+      msg:"Successfully",
+      data:students
+    })
+
+  }
+  catch(err){
+    res.json("smth went wrong",err)
+  }
+})
 
 // Method: Get
 // Desc:   Get one Student by id
@@ -47,6 +99,23 @@ router.get("/:id", async (req, res) => {
     }
 });
 
+// Method: Get
+// get more student
+router.get("/see-more-student/:studentCount", async (req, res) => {
+  try{
+    const {studentCount} = req.params
+    const students = await Students.find().limit(studentCount)
+
+    res.json({
+      state:true,
+      msg:"Successfully",
+      data:students
+    })
+  }
+  catch(err){
+    res.json("smth went wrong",err)
+  }
+})
 
 
 // Method : Post 
@@ -62,7 +131,7 @@ router.post("/sign-up",  async(req, res)=>{
         if(user){
             return res.json({msg:"username is already been declared", user: {}, state: false } )
         }
-        const newUser = await Students.create({username, password, name, image, connection,desc, student:true, mainLessons:[] , lessons:[], })
+        const newUser = await Students.create({username, password, name, image, connection,desc, student:true, offLineLesson:[] , mainLessons:[],overallLessons:[] ,overallLessonsCount:0 ,teachers:[], lessons:[], })
         const salt = await bcrypt.genSalt(10)
         newUser.password = await bcrypt.hash(newUser.password, salt)
         const savedUser = await newUser.save()
@@ -104,7 +173,7 @@ router.post("/sign-in", async(req, res)=>{
   router.patch("/add-mainLesson/:id", async(req, res)=>{
     try{
       const {id} = req.params
-      const { mainLesson } = req.body
+      const { mainLesson,themes,teacher } = req.body
       if(!mainLesson){
         return res.status(200).json({
           state:false,
@@ -120,15 +189,38 @@ router.post("/sign-in", async(req, res)=>{
           data:mainLesson
         })
       }
+      const unLearnedThemes = []
+       themes.forEach( j => {
+          if(!updateStudentOne.overallLessons.includes(j._id)){
+            unLearnedThemes.push(j._id)
+          }
+        })
+     
       const updateStudent = await Students.updateOne(
         {_id: id},
         {
           $set: {
-            mainLessons: [...updateStudentOne.mainLessons ,mainLesson]
+            mainLessons: [...updateStudentOne.mainLessons ,mainLesson],
+            overallLessons:[...updateStudentOne.overallLessons,{mainLesson,themes:unLearnedThemes}],
+            overallLessonsCount: updateStudentOne.overallLessonsCount + unLearnedThemes.length
           }
         }
       );
-      res.json({msg: 'This MainLesson is added ', data: updateStudent, state: true})
+      if (updateStudentOne.teachers.includes(teacher)) {
+        return    res.json({msg: 'This MainLesson,overallLessonsCount and themes are added ', data: updateStudent, state: true})
+       
+      }
+      const updateStudent2 = await Students.updateOne(
+        {_id: id},
+        {
+          $set: {
+            teachers:[...updateStudentOne.teachers,teacher],
+          }
+        }
+      );
+     
+   
+      res.json({msg: 'This MainLesson,teachers ,overallLessonsCount  and themes are added ', data: [updateStudent,updateStudent2], state: true})
     }
     catch(err){
       res.json(err)
@@ -137,8 +229,8 @@ router.post("/sign-in", async(req, res)=>{
 
 
   // Method : Patch
-  // add lessons
-  router.patch("/add-lesson/:id", async(req, res)=>{
+  // add theme
+  router.patch("/add-theme/:id", async(req, res)=>{
     try{
       const {id} = req.params
       const {lesson } = req.body
@@ -158,13 +250,126 @@ router.post("/sign-in", async(req, res)=>{
           }
         }
       );
-      res.json({msg: 'This Lesson is added ', data: updateStudent, state: true})
+      res.json({msg: 'This Theme is added ', data: updateStudent, state: true})
+    }
+    catch(err){
+      res.json(err)
+    }
+  })
+  
+  //Method : Patch
+  // Increasee student's themes count that must be learn
+  router.patch("/add-theme-count/:id", async(req, res)=>{
+    try{
+      const {id} = req.params
+      
+      const updateStudentOne = await Students.findById(id)
+      const updateStudent = await Students.updateOne(
+        {_id: id},
+        {
+          $set: {
+            overallLessonsCount: updateStudentOne.overallLessonsCount + 1
+          }
+        }
+      );
+      res.json({msg: 'This Theme is added ', data: updateStudent, state: true})
+    }
+    catch(err){
+      res.json(err)
+    }
+  })
+  //Method : Patch
+  // Decreasee student's themes count that must be learn
+  router.patch("/remove-theme-count/:id", async(req, res)=>{
+    try{
+      const {id} = req.params
+      
+      const updateStudentOne = await Students.findById(id)
+      const updateStudent = await Students.updateOne(
+        {_id: id},
+        {
+          $set: {
+            overallLessonsCount: updateStudentOne.overallLessonsCount - 1
+          }
+        }
+      );
+      res.json({msg: 'This Theme is added ', data: updateStudent, state: true})
     }
     catch(err){
       res.json(err)
     }
   })
 
+  router.patch("/change-image/:id", async(req, res) => {
+    try{
+      const {id} = req.params
+      const {newImage} = req.body
+      if(!newImage){
+        return res.json({state:false, msg:"newImage is not found",data:newImage})
+      }
+      const updateStudent = await Students.updateOne(
+        {_id:id},
+        {
+          $set: {
+            image: newImage
+          }
+        }
+      );
+      res.json({state:true,msg:"Successfully",data:updateStudent})
+    }
+    catch(err){
+      res.json("smth went wrong ", err)
+    }
+  })
+
+  // // Method  Patch
+  // // add themes that must will learn
+  // router.patch("/add-overall-lesson", async(req,res) => {
+  //   try{
+  //     const {themes} = req.body;
+  //     const {studentsId} = req.body;
+  //     if (!themes) {
+  //       return res.json({
+  //         state:false,
+  //         msg:"themes are not found",
+  //         data:themes
+  //       })
+  //     }
+  //     if (!studentsId) {
+  //       return res.json({
+  //         state:false,
+  //         msg:"Students are not found",
+  //         data:studentsId
+  //       })
+  //     }
+
+  //     const returns = []
+
+  //     studentsId.forEach( id => {
+  //       const updateStudentOne = await (Students.findById(id))
+  //       // const newestThemes = themes.filter(theme => !updateStudentOne.includes(theme))
+        
+  //       await (Students.updateOne(
+  //         {_id: id},
+  //         {
+  //           $set: {
+  //             overallLessons: [...updateStudentOne.overallLessons,themes]
+  //           }
+  //         }
+  //       ));
+  //       // returns.push(updateStudent)
+  //     });
+
+  //     res.json({
+  //       state:true,
+  //       msg:"Successfully",
+  //       data:returns
+  //     })
+  //   }
+  //   catch(err){
+  //     res.json("smth went wrong ",err)
+  //   }
+  // })
 
     // Method Delete
     // Delete Student 
